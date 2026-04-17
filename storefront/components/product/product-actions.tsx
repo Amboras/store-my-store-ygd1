@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from 'react'
 import { useCart } from '@/hooks/use-cart'
-import { Minus, Plus, Check, Loader2 } from 'lucide-react'
+import { Minus, Plus, Check, Loader2, ShieldCheck, Truck, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import ProductPrice, { type VariantExtension } from './product-price'
+import ProductBundleOffer, { StockUrgency, TrustBadges } from './product-bundle-offer'
 import { trackAddToCart } from '@/lib/analytics'
 import { trackMetaEvent, toMetaCurrencyValue } from '@/lib/meta-pixel'
 import type { Product } from '@/types'
@@ -41,7 +42,6 @@ interface ProductOptionWithValues {
   values?: (string | ProductOptionValue)[]
 }
 
-// Helper: extract price amount from calculated_price object
 function getVariantPriceAmount(variant: ProductVariantWithPrice | undefined): number | null {
   const cp = variant?.calculated_price
   if (!cp) return null
@@ -49,17 +49,12 @@ function getVariantPriceAmount(variant: ProductVariantWithPrice | undefined): nu
 }
 
 export default function ProductActions({ product, variantExtensions }: ProductActionsProps) {
-  // Medusa Admin API returns variant.options as VariantOption[] (the `options`
-  // relation expanded), but the SDK's generic ProductVariant type declares it
-  // as Record<string, string>. Cast here so the rest of the component can use
-  // the actual runtime shape.
   const variants = useMemo(
     () => (product.variants || []) as unknown as ProductVariantWithPrice[],
     [product.variants],
   )
   const options = useMemo(() => product.options || [], [product.options])
 
-  // Track selected value per option: { "opt_xxx": "S", "opt_yyy": "Black" }
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(() => {
     const defaults: Record<string, string> = {}
     const firstVariant = variants[0]
@@ -76,12 +71,12 @@ export default function ProductActions({ product, variantExtensions }: ProductAc
 
   const [quantity, setQuantity] = useState(1)
   const [justAdded, setJustAdded] = useState(false)
+  const [selectedBundleQty, setSelectedBundleQty] = useState(1)
+  const [bundlePriceOverride, setBundlePriceOverride] = useState<number | null>(null)
   const { addItem, isAddingItem } = useCart()
 
-  // Find variant matching all selected options
   const selectedVariant = useMemo(() => {
     if (variants.length <= 1) return variants[0]
-
     return variants.find((v: ProductVariantWithPrice) => {
       if (!v.options) return false
       return v.options.every((opt: VariantOption) => {
@@ -92,20 +87,26 @@ export default function ProductActions({ product, variantExtensions }: ProductAc
     }) || variants[0]
   }, [variants, selectedOptions])
 
-  // Extension data for selected variant (compare-at + inventory)
   const ext = selectedVariant?.id ? variantExtensions?.[selectedVariant.id] : null
   const currentPriceCents = getVariantPriceAmount(selectedVariant)
   const cp = selectedVariant?.calculated_price
-  const currency = (cp && typeof cp !== 'number' ? cp.currency_code : undefined) || 'usd'
+  const currency = (cp && typeof cp !== 'number' ? cp.currency_code : undefined) || 'inr'
 
   const allowBackorder = ext?.allow_backorder ?? false
   const inventoryQuantity = ext?.inventory_quantity
   const isOutOfStock = !allowBackorder && inventoryQuantity != null && inventoryQuantity <= 0
-  const isLowStock = inventoryQuantity != null && inventoryQuantity > 0 && inventoryQuantity < 10
 
   const handleOptionChange = (optionId: string, value: string) => {
     setSelectedOptions((prev) => ({ ...prev, [optionId]: value }))
     setQuantity(1)
+    setSelectedBundleQty(1)
+    setBundlePriceOverride(null)
+  }
+
+  const handleSelectBundle = (qty: number, priceOverride?: number) => {
+    setSelectedBundleQty(qty)
+    setQuantity(qty)
+    setBundlePriceOverride(priceOverride ?? null)
   }
 
   const handleAddToCart = () => {
@@ -116,7 +117,7 @@ export default function ProductActions({ product, variantExtensions }: ProductAc
       {
         onSuccess: () => {
           setJustAdded(true)
-          toast.success('Added to bag')
+          toast.success(`${quantity > 1 ? `${quantity}x ` : ''}Added to bag`)
           const metaValue = toMetaCurrencyValue(currentPriceCents)
           trackAddToCart(product?.id || '', selectedVariant.id, quantity, currentPriceCents ?? undefined)
           trackMetaEvent('AddToCart', {
@@ -128,7 +129,7 @@ export default function ProductActions({ product, variantExtensions }: ProductAc
             contents: [{ id: selectedVariant.id, quantity, item_price: metaValue }],
             num_items: quantity,
           })
-          setTimeout(() => setJustAdded(false), 2000)
+          setTimeout(() => setJustAdded(false), 2500)
         },
         onError: (error: Error) => {
           toast.error(error.message || 'Failed to add to bag')
@@ -137,28 +138,35 @@ export default function ProductActions({ product, variantExtensions }: ProductAc
     )
   }
 
-  // Should we show variant selectors?
   const hasMultipleVariants = variants.length > 1
+  const effectivePriceCents = bundlePriceOverride !== null && selectedBundleQty > 1
+    ? Math.round(bundlePriceOverride / selectedBundleQty)
+    : currentPriceCents
 
   return (
     <div className="space-y-6">
       {/* Price */}
-      <ProductPrice
-        amount={currentPriceCents}
-        currency={currency}
-        compareAtPrice={ext?.compare_at_price}
-        soldOut={isOutOfStock}
-        size="detail"
-      />
+      <div className="flex items-center gap-3">
+        <ProductPrice
+          amount={effectivePriceCents}
+          currency={currency}
+          compareAtPrice={ext?.compare_at_price}
+          soldOut={isOutOfStock}
+          size="detail"
+        />
+        {selectedBundleQty > 1 && bundlePriceOverride && currentPriceCents && (
+          <span className="text-sm text-[#7c5c3e] font-semibold bg-[#7c5c3e]/10 px-2.5 py-1 rounded-full">
+            Bundle price applied
+          </span>
+        )}
+      </div>
 
       {/* Option Selectors */}
-      {hasMultipleVariants && options.map((option: ProductOptionWithValues) => {
-        // option.values is an array of { id, value, ... } objects
+      {hasMultipleVariants && (options as ProductOptionWithValues[]).map((option) => {
         const values = (option.values || []).map((v: string | ProductOptionValue) =>
           typeof v === 'string' ? v : v.value
         ).filter(Boolean) as string[]
 
-        // Skip if only "One Size" or "Default"
         if (values.length <= 1 && (values[0] === 'One Size' || values[0] === 'Default')) {
           return null
         }
@@ -179,12 +187,10 @@ export default function ProductActions({ product, variantExtensions }: ProductAc
             <div className="flex flex-wrap gap-2">
               {values.map((value) => {
                 const isSelected = selectedValue === value
-
-                // Check availability: is there a variant with this option value that's in stock
-                // (or that allows backorders)?
                 const isAvailable = variants.some((v: ProductVariantWithPrice) => {
                   const hasValue = v.options?.some(
-                    (o: VariantOption) => (o.option_id === optionId || o.option?.id === optionId) && o.value === value
+                    (o: VariantOption) =>
+                      (o.option_id === optionId || o.option?.id === optionId) && o.value === value
                   )
                   if (!hasValue) return false
                   const vExt = variantExtensions?.[v.id]
@@ -198,11 +204,11 @@ export default function ProductActions({ product, variantExtensions }: ProductAc
                     key={value}
                     onClick={() => handleOptionChange(optionId, value)}
                     disabled={!isAvailable}
-                    className={`min-w-[48px] px-4 py-2.5 text-sm border transition-all ${
+                    className={`min-w-[52px] px-4 py-2.5 text-sm border-2 rounded-sm transition-all font-medium ${
                       isSelected
-                        ? 'border-foreground bg-foreground text-background'
+                        ? 'border-[#7c5c3e] bg-[#7c5c3e] text-white'
                         : isAvailable
-                        ? 'border-border hover:border-foreground'
+                        ? 'border-border hover:border-[#7c5c3e]/60 text-foreground'
                         : 'border-border text-muted-foreground/40 line-through cursor-not-allowed'
                     }`}
                   >
@@ -215,27 +221,44 @@ export default function ProductActions({ product, variantExtensions }: ProductAc
         )
       })}
 
-      {/* Low Stock Warning */}
-      {isLowStock && (
-        <p className="text-sm text-accent font-medium">
-          Only {inventoryQuantity} left in stock
-        </p>
-      )}
+      {/* Stock Urgency */}
+      <StockUrgency quantity={inventoryQuantity} />
+
+      {/* Bundle Offer */}
+      <ProductBundleOffer
+        basePrice={currentPriceCents}
+        currency={currency}
+        onSelectBundle={handleSelectBundle}
+        selectedBundleQty={selectedBundleQty}
+      />
 
       {/* Quantity + Add to Cart */}
       <div className="flex gap-3">
-        <div className="flex items-center border">
+        <div className="flex items-center border-2 border-border rounded-sm overflow-hidden">
           <button
-            onClick={() => setQuantity(Math.max(1, quantity - 1))}
+            onClick={() => {
+              const newQty = Math.max(1, quantity - 1)
+              setQuantity(newQty)
+              if (selectedBundleQty > 1) {
+                setSelectedBundleQty(1)
+                setBundlePriceOverride(null)
+              }
+            }}
             className="p-3 hover:bg-muted transition-colors"
             disabled={quantity <= 1}
             aria-label="Decrease quantity"
           >
             <Minus className="h-4 w-4" />
           </button>
-          <span className="w-12 text-center text-sm font-medium tabular-nums">{quantity}</span>
+          <span className="w-12 text-center text-sm font-bold tabular-nums">{quantity}</span>
           <button
-            onClick={() => setQuantity(quantity + 1)}
+            onClick={() => {
+              setQuantity(quantity + 1)
+              if (selectedBundleQty > 1) {
+                setSelectedBundleQty(1)
+                setBundlePriceOverride(null)
+              }
+            }}
             className="p-3 hover:bg-muted transition-colors"
             disabled={isOutOfStock || (!allowBackorder && inventoryQuantity != null && quantity >= inventoryQuantity)}
             aria-label="Increase quantity"
@@ -247,12 +270,12 @@ export default function ProductActions({ product, variantExtensions }: ProductAc
         <button
           onClick={handleAddToCart}
           disabled={isOutOfStock || isAddingItem}
-          className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold uppercase tracking-wide transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold uppercase tracking-wider rounded-sm transition-all ${
             isOutOfStock
               ? 'bg-muted text-muted-foreground cursor-not-allowed'
               : justAdded
               ? 'bg-green-700 text-white'
-              : 'bg-foreground text-background hover:opacity-90'
+              : 'bg-[#7c5c3e] text-white hover:bg-[#6a4e34]'
           }`}
         >
           {isAddingItem ? (
@@ -260,14 +283,33 @@ export default function ProductActions({ product, variantExtensions }: ProductAc
           ) : justAdded ? (
             <>
               <Check className="h-4 w-4" />
-              Added
+              Added to Bag
             </>
           ) : isOutOfStock ? (
             'Sold Out'
           ) : (
-            'Add to Bag'
+            `Add to Bag${quantity > 1 ? ` (${quantity})` : ''}`
           )}
         </button>
+      </div>
+
+      {/* Trust Badges */}
+      <TrustBadges />
+
+      {/* Delivery & Returns strip */}
+      <div className="space-y-2 pt-1">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <Truck className="h-4 w-4 text-[#7c5c3e] flex-shrink-0" strokeWidth={1.8} />
+          <span>Free delivery on orders above <strong className="text-foreground">₹999</strong></span>
+        </div>
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <RotateCcw className="h-4 w-4 text-[#7c5c3e] flex-shrink-0" strokeWidth={1.8} />
+          <span>30-day hassle-free returns &amp; exchange</span>
+        </div>
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <ShieldCheck className="h-4 w-4 text-[#7c5c3e] flex-shrink-0" strokeWidth={1.8} />
+          <span>100% authentic &amp; quality-checked products</span>
+        </div>
       </div>
     </div>
   )

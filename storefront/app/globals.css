@@ -4,35 +4,36 @@
 
 @layer base {
   :root {
-    --background: 40 20% 98%;
-    --foreground: 0 0% 10%;
-    --muted: 40 10% 94%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 35 40% 50%;
+    /* Warm sand & terracotta home goods palette */
+    --background: 36 22% 97%;
+    --foreground: 24 15% 12%;
+    --muted: 36 15% 92%;
+    --muted-foreground: 24 8% 48%;
+    --accent: 20 55% 45%;
     --accent-foreground: 0 0% 100%;
-    --border: 40 10% 88%;
-    --ring: 35 40% 50%;
-    --primary: 0 0% 10%;
-    --primary-foreground: 0 0% 98%;
+    --border: 36 15% 85%;
+    --ring: 20 55% 45%;
+    --primary: 24 15% 12%;
+    --primary-foreground: 36 22% 97%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
 
-    /* Brand colors (dynamically injected from Store.metadata.brand) */
-    /* Access in CSS: var(--brand-primary), var(--brand-secondary) */
-    /* Managed by BrandStyleInjector component */
+    /* Brand colors */
+    --brand-primary: #7c5c3e;
+    --brand-secondary: #c9a87c;
   }
 
   .dark {
-    --background: 0 0% 6%;
-    --foreground: 40 20% 94%;
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 55%;
-    --accent: 35 45% 55%;
+    --background: 24 12% 8%;
+    --foreground: 36 20% 93%;
+    --muted: 24 8% 14%;
+    --muted-foreground: 36 8% 55%;
+    --accent: 20 50% 55%;
     --accent-foreground: 0 0% 100%;
-    --border: 0 0% 16%;
-    --ring: 35 45% 55%;
-    --primary: 40 20% 94%;
-    --primary-foreground: 0 0% 6%;
+    --border: 24 8% 18%;
+    --ring: 20 50% 55%;
+    --primary: 36 20% 93%;
+    --primary-foreground: 24 12% 8%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
   }
@@ -72,17 +73,17 @@
     @apply w-full;
   }
 
-  /* Brand color utilities - uses colors from Store.metadata.brand */
+  /* Brand color utilities */
   .btn-brand-primary {
     background-color: var(--brand-primary, hsl(var(--primary)));
     color: white;
   }
   .btn-brand-primary:hover {
-    opacity: 0.9;
+    opacity: 0.88;
   }
 
   .text-brand-primary {
-    color: var(--brand-primary, hsl(var(--primary)));
+    color: var(--brand-primary, hsl(var(--accent)));
   }
 
   .text-brand-secondary {
@@ -100,6 +101,19 @@
   .bg-brand-secondary {
     background-color: var(--brand-secondary, hsl(var(--accent)));
   }
+
+  /* Home goods warm tones */
+  .bg-warm {
+    background-color: hsl(36 22% 94%);
+  }
+
+  .bg-terracotta {
+    background-color: #c2714f;
+  }
+
+  .text-terracotta {
+    color: #c2714f;
+  }
 }
 
 /* Smooth scrolling */
@@ -109,7 +123,8 @@ html {
 
 /* Selection color */
 ::selection {
-  @apply bg-accent/20 text-foreground;
+  background: rgba(124, 92, 62, 0.15);
+  color: hsl(var(--foreground));
 }
 
 /* Focus styles */
@@ -130,5 +145,29 @@ html {
 }
 
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out;
+  animation: fade-in 0.4s ease-out;
+}
+
+@keyframes fade-in-up-custom {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up-custom 0.7s ease-out both;
+}
+
+@keyframes count-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.animate-count-pulse {
+  animation: count-pulse 2s ease-in-out infinite;
 }

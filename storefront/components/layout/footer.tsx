@@ -1,6 +1,7 @@
 'use client'
-
+// Nestify Footer v2
 import Link from 'next/link'
+import { Home, Camera, Share2, PlayCircle } from 'lucide-react'
 import { clearConsent } from '@/lib/cookie-consent'
 import { usePolicies } from '@/hooks/use-policies'
 
@@ -9,23 +10,30 @@ const footerLinks = {
     { label: 'All Products', href: '/products' },
     { label: 'New Arrivals', href: '/products?sort=newest' },
     { label: 'Collections', href: '/collections' },
+    { label: 'Kitchen & Dining', href: '/products' },
+    { label: 'Living & Decor', href: '/products' },
   ],
   help: [
     { label: 'FAQ', href: '/faq' },
     { label: 'Shipping & Returns', href: '/shipping' },
     { label: 'Contact Us', href: '/contact' },
+    { label: 'Track Order', href: '/account/orders' },
   ],
 }
+
+const socialLinks = [
+  { icon: Camera, label: 'Instagram', href: '#' },
+  { icon: Share2, label: 'Facebook', href: '#' },
+  { icon: PlayCircle, label: 'YouTube', href: '#' },
+]
 
 export default function Footer() {
   const { policies } = usePolicies()
 
-  // Build company links dynamically based on available policies
   const companyLinks = [
-    { label: 'About', href: '/about' },
+    { label: 'About Us', href: '/about' },
   ]
 
-  // Add policy links only if they're set in the admin
   if (policies?.privacy_policy) {
     companyLinks.push({ label: 'Privacy Policy', href: '/privacy' })
   }
@@ -40,29 +48,44 @@ export default function Footer() {
   }
 
   return (
-    <footer className="border-t bg-muted/30">
+    <footer className="border-t bg-[#2b1f14] text-white/80">
       <div className="container-custom py-section-sm">
         {/* Main Footer */}
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div className="lg:col-span-1">
-            <Link href="/" className="inline-block">
-              <span className="font-heading text-2xl font-semibold">
-                Store
+            <Link href="/" className="inline-flex items-center gap-2 mb-4">
+              <div className="flex items-center justify-center w-8 h-8 rounded-sm bg-[#7c5c3e]">
+                <Home className="h-4 w-4 text-white" strokeWidth={1.8} />
+              </div>
+              <span className="font-heading text-xl font-bold text-white tracking-tight">
+                Nestify
               </span>
             </Link>
-            <p className="mt-4 text-sm text-muted-foreground leading-relaxed max-w-xs">
-              Curated products crafted with care. Quality you can feel, design you can see.
+            <p className="text-sm text-white/55 leading-relaxed max-w-xs">
+              Premium home essentials curated for the everyday Indian household. Quality you can see, comfort you can feel.
             </p>
+            <div className="flex items-center gap-3 mt-5">
+              {socialLinks.map(({ icon: Icon, label, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  aria-label={label}
+                  className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center hover:bg-[#7c5c3e] transition-colors"
+                >
+                  <Icon className="h-4 w-4 text-white" strokeWidth={1.6} />
+                </a>
+              ))}
+            </div>
           </div>
 
           {/* Shop Links */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-widest mb-4">Shop</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-widest mb-4 text-white">Shop</h3>
             <ul className="space-y-3">
               {footerLinks.shop.map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <li key={link.href + link.label}>
+                  <Link href={link.href} className="text-sm text-white/55 hover:text-white transition-colors">
                     {link.label}
                   </Link>
                 </li>
@@ -72,11 +95,11 @@ export default function Footer() {
 
           {/* Help Links */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-widest mb-4">Help</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-widest mb-4 text-white">Help</h3>
             <ul className="space-y-3">
               {footerLinks.help.map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <li key={link.href + link.label}>
+                  <Link href={link.href} className="text-sm text-white/55 hover:text-white transition-colors">
                     {link.label}
                   </Link>
                 </li>
@@ -86,23 +109,33 @@ export default function Footer() {
 
           {/* Company Links */}
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-widest mb-4">Company</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-widest mb-4 text-white">Company</h3>
             <ul className="space-y-3">
               {companyLinks.map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  <Link href={link.href} className="text-sm text-white/55 hover:text-white transition-colors">
                     {link.label}
                   </Link>
                 </li>
               ))}
             </ul>
+            <div className="mt-8">
+              <p className="text-xs text-white/40 uppercase tracking-widest mb-2">We Accept</p>
+              <div className="flex flex-wrap gap-2">
+                {['UPI', 'VISA', 'MC', 'COD'].map((m) => (
+                  <span key={m} className="text-[10px] font-bold bg-white/10 text-white/60 px-2.5 py-1 rounded">
+                    {m}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} Store. All rights reserved.
+        <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-white/35">
+            &copy; {new Date().getFullYear()} Nestify. All rights reserved. Made with care in India.
           </p>
           <div className="flex items-center gap-6">
             <button
@@ -110,11 +143,11 @@ export default function Footer() {
                 clearConsent()
                 window.dispatchEvent(new Event('manage-cookies'))
               }}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="text-xs text-white/35 hover:text-white/60 transition-colors"
             >
               Manage Cookies
             </button>
-            <span className="text-xs text-muted-foreground">Powered by Amboras</span>
+            <span className="text-xs text-white/25">Powered by Amboras</span>
           </div>
         </div>
       </div>

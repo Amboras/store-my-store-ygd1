@@ -30,10 +30,10 @@ const body = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Store — Modern Commerce',
-    template: '%s | Store',
+    default: 'Nestify — Beautiful Home Essentials',
+    template: '%s | Nestify',
   },
-  description: 'Discover curated products crafted with care. A modern ecommerce experience.',
+  description: 'Discover premium home essentials curated for the everyday Indian home. Quality kitchen, dining, and living products at the best prices.',
 }
 
 export default function RootLayout({
